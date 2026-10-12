@@ -8,7 +8,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithPopup, 
   firebaseSignOut,
-  updateProfile
+  updateProfile,
+  firebaseDb
 } from '../services/firebase';
 
 interface AuthContextType {
@@ -94,6 +95,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role
       );
 
+      // 4. Also store in Firebase Firestore database
+      await firebaseDb.saveUserProfile(fbUser.uid, {
+        email,
+        full_name: fullName,
+        role,
+        auth_provider: 'password'
+      });
+
       localStorage.setItem('sehat_token', data.access_token);
       localStorage.setItem('sehat_user', JSON.stringify(data.user));
       setUser(data.user);
@@ -123,6 +132,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fbUser.displayName || undefined,
         role
       );
+
+      // Also store in Firebase Firestore database
+      await firebaseDb.saveUserProfile(fbUser.uid, {
+        email: fbUser.email,
+        full_name: fbUser.displayName || 'Google User',
+        role,
+        auth_provider: 'google'
+      });
 
       localStorage.setItem('sehat_token', data.access_token);
       localStorage.setItem('sehat_user', JSON.stringify(data.user));

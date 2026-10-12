@@ -32,6 +32,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
+import { firebaseDb } from '../services/firebase';
 import { DashboardStats } from '../types';
 
 interface DashboardPageProps {
@@ -119,7 +120,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+
+    // Sync from Firebase Firestore if available
+    if (user?.id) {
+      firebaseDb.getPillTracking(user.id, todayKey).then(remotePills => {
+        if (remotePills && Object.keys(remotePills).length > 0) {
+          setTakenPills(prev => ({ ...prev, ...remotePills }));
+        }
+      }).catch(e => console.warn('Pill sync skipped:', e));
+    }
+  }, [user]);
 
   const loadDashboardData = async () => {
     try {
@@ -137,6 +147,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     setTakenPills(prev => {
       const next = { ...prev, [id]: !prev[id] };
       localStorage.setItem(`sehat_pills_${todayKey}`, JSON.stringify(next));
+
+      // Also persist to Firebase Cloud Firestore
+      if (user?.id) {
+        firebaseDb.savePillTracking(user.id, todayKey, next).catch(e => {
+          console.warn('Firebase pill sync warning:', e);
+        });
+      }
+
       return next;
     });
   };
