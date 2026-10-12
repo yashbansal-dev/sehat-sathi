@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    background-color: #f4f7fb;
+    color: #0f2438;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Hospital Clean Theme Accents */
+.hospital-header-gradient {
+  background: linear-gradient(135deg, #093b68 0%, #0369a1 50%, #0284c7 100%);
+}
+
+.hospital-card {
+  background-color: #ffffff;
+  border: 1px solid #e1e9f2;
+  box-shadow: 0 1px 3px rgba(15, 36, 56, 0.05), 0 1px 2px rgba(15, 36, 56, 0.03);
+}
+
+.hospital-card-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hospital-card-hover:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 12px -2px rgba(2, 132, 199, 0.12), 0 2px 6px -1px rgba(2, 132, 199, 0.08);
+}
+
+/* Custom Print Rules for Two-Minute Doctor Brief */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
