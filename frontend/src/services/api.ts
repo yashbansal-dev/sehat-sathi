@@ -16,7 +16,12 @@ const getApiBaseUrl = (): string => {
     const envUrl = (import.meta as any).env?.VITE_API_URL;
     if (envUrl) return envUrl;
     const hostname = window.location.hostname;
-    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('vercel.app')) {
+    // On Vercel or any deployed domain without an explicit VITE_API_URL,
+    // use relative path "" so API requests route to the same domain (e.g. /api/...)
+    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      if (hostname.includes('vercel.app')) {
+        return '';
+      }
       return `http://${hostname}:8000`;
     }
   }

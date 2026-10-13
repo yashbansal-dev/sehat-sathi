@@ -2,19 +2,24 @@ import os
 from pydantic_settings import BaseSettings
 from typing import Optional
 
+is_vercel = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+default_db_url = "sqlite:////tmp/sehat_sathi.db" if is_vercel else "sqlite:///./sehat_sathi.db"
+default_upload_dir = "/tmp/uploads" if is_vercel else os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage", "uploads")
+default_synth_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage", "synthetic")
+
 class Settings(BaseSettings):
     APP_NAME: str = "Sehat Sathi AI - The Two-Minute Doctor"
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    ENVIRONMENT: str = "production" if is_vercel else "development"
+    DEBUG: bool = not is_vercel
     
     # Storage & Uploads
-    UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage", "uploads")
-    SYNTHETIC_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage", "synthetic")
+    UPLOAD_DIR: str = os.environ.get("UPLOAD_DIR", default_upload_dir)
+    SYNTHETIC_DIR: str = os.environ.get("SYNTHETIC_DIR", default_synth_dir)
     MAX_UPLOAD_SIZE_MB: int = 15
     ALLOWED_EXTENSIONS: list[str] = [".pdf", ".png", ".jpg", ".jpeg"]
     
     # Database
-    DATABASE_URL: str = "sqlite:///./sehat_sathi.db"
+    DATABASE_URL: str = os.environ.get("DATABASE_URL", default_db_url)
     
     # Security & Tokens
     SECRET_KEY: str = "sehat-sathi-super-secure-production-secret-change-in-prod-2026"

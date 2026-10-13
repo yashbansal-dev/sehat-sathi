@@ -17,6 +17,14 @@ from app.data.synthetic_samples import seed_synthetic_patient_data
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Auto-seed synthetic demo data immediately (essential for serverless cold-starts on /tmp)
+try:
+    _init_db = SessionLocal()
+    seed_synthetic_patient_data(_init_db)
+    _init_db.close()
+except Exception as _e:
+    pass
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="Sehat Sathi AI — The Two-Minute Doctor Medical Intelligence Platform",
