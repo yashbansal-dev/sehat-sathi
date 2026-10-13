@@ -32,15 +32,15 @@ import {
   onValue
 } from 'firebase/database';
 
-// User-provided Firebase Configuration
+// Project Firebase Configuration (Supports Environment Variables or Direct Config)
 const firebaseConfig = {
-  apiKey: "AIzaSyBy2yqgPlB16M-9QIW6xus-rDYWQAmcNmk",
-  authDomain: "sehat-sathi-88156.firebaseapp.com",
-  projectId: "sehat-sathi-88156",
-  storageBucket: "sehat-sathi-88156.firebasestorage.app",
-  messagingSenderId: "983257312820",
-  appId: "1:983257312820:web:09ddfd14207ab9a0316461",
-  measurementId: "G-N45V5XLYWG"
+  apiKey: (import.meta as any).env?.VITE_FIREBASE_API_KEY || "AIzaSyBy2yqgPlB16M-9QIW6xus-rDYWQAmcNmk",
+  authDomain: (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || "sehat-sathi-88156.firebaseapp.com",
+  projectId: (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || "sehat-sathi-88156",
+  storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || "sehat-sathi-88156.firebasestorage.app",
+  messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || "983257312820",
+  appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || "1:983257312820:web:09ddfd14207ab9a0316461",
+  measurementId: (import.meta as any).env?.VITE_FIREBASE_MEASUREMENT_ID || "G-N45V5XLYWG"
 };
 
 // Initialize Firebase App
