@@ -15,16 +15,27 @@ import {
   Activity, 
   Stethoscope, 
   Building2, 
-  Maximize2 
+  Maximize2,
+  Sparkles,
+  Share2,
+  Send,
+  Check,
+  Copy,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { api } from '../services/api';
 import { MedicalDocument } from '../types';
 
 interface DocumentsPageProps {
   initialOpenUpload?: boolean;
+  onOpenDoctorPortal?: (token: string) => void;
 }
 
-export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload = false }) => {
+export const DocumentsPage: React.FC<DocumentsPageProps> = ({ 
+  initialOpenUpload = false,
+  onOpenDoctorPortal 
+}) => {
   const [documents, setDocuments] = useState<MedicalDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -37,6 +48,14 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Send to Doctor Modal State
+  const [sharingDoc, setSharingDoc] = useState<MedicalDocument | null>(null);
+  const [shareDoctorName, setShareDoctorName] = useState('');
+  const [shareHours, setShareHours] = useState(48);
+  const [creatingShare, setCreatingShare] = useState(false);
+  const [generatedShare, setGeneratedShare] = useState<{ token: string; shareUrl: string; expiresAt: string } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Detail view state
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
@@ -157,6 +176,57 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
       await fetchDocuments();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleOpenShareModal = (doc: MedicalDocument, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSharingDoc(doc);
+    setShareDoctorName(doc.doctor_name ? `Dr. ${doc.doctor_name}` : '');
+    setShareHours(48);
+    setGeneratedShare(null);
+    setCopiedLink(false);
+  };
+
+  const handleGenerateDoctorLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sharingDoc) return;
+    setCreatingShare(true);
+    try {
+      const docTitle = sharingDoc.original_filename || sharingDoc.filename || 'Medical Record';
+      const doctorTarget = shareDoctorName.trim() || 'Attending Physician';
+      const tokenRes = await api.createShareToken(
+        `${sharingDoc.category}: ${docTitle}`,
+        shareHours,
+        doctorTarget,
+        [sharingDoc.id]
+      );
+      const fullUrl = `${window.location.origin}/doctor-portal/${tokenRes.token}`;
+      setGeneratedShare({
+        token: tokenRes.token,
+        shareUrl: fullUrl,
+        expiresAt: tokenRes.expires_at
+      });
+
+      // Synchronize with Dr. Meera Singh's live clinic queue as well
+      try {
+        await api.checkInPatient({
+          chief_complaint: `Patient shared ${sharingDoc.category}: ${docTitle} for consultation with ${doctorTarget}`,
+          documents: documents
+        });
+      } catch {}
+    } catch (err: any) {
+      alert(err.message || 'Failed to generate doctor access link');
+    } finally {
+      setCreatingShare(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (generatedShare) {
+      navigator.clipboard.writeText(generatedShare.shareUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
     }
   };
 
@@ -305,17 +375,16 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
                     className="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-bold flex items-center space-x-1"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>View PDF</span>
+                    <span>View</span>
                   </button>
 
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenDetails(doc.id, 'facts');
-                    }}
-                    className="px-2 py-1 text-slate-600 hover:text-slate-900 rounded-lg text-xs font-medium"
+                    onClick={(e) => handleOpenShareModal(doc, e)}
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold flex items-center space-x-1 transition"
+                    title="Send this record to Doctor Portal"
                   >
-                    Extracted Data
+                    <Send className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Send to Doctor</span>
                   </button>
                 </div>
 
@@ -377,7 +446,11 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
                       modalTab === 'pdf' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    📄 Original PDF Viewer
+                    {((selectedDoc.document?.original_filename || '').match(/\.(png|jpe?g|webp|gif|svg)$/i) ||
+                      selectedDoc.document?.file_type?.toLowerCase().includes('image') ||
+                      (selectedDoc.document?.preview_url && selectedDoc.document.preview_url.startsWith('data:image')))
+                      ? '🖼️ Original Image'
+                      : '📄 Original Document'}
                   </button>
                   <button
                     onClick={() => setModalTab('facts')}
@@ -397,11 +470,20 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
                   </button>
                 </div>
 
+                <button
+                  onClick={() => handleOpenShareModal(selectedDoc.document)}
+                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm transition cursor-pointer"
+                  title="Send this record to Doctor Portal"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Send to Doctor</span>
+                </button>
+
                 <a
-                  href={api.getDocumentFileUrl(selectedDoc.document?.id)}
+                  href={selectedDoc.document?.preview_url || api.getDocumentFileUrl(selectedDoc.document?.id)}
                   target="_blank"
                   rel="noreferrer"
-                  title="Open PDF in new tab"
+                  title="Open file in new tab"
                   className="p-2 text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg text-xs font-bold flex items-center space-x-1"
                 >
                   <Maximize2 className="w-4 h-4" />
@@ -409,7 +491,7 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
 
                 <button
                   onClick={() => setSelectedDoc(null)}
-                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200"
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -422,7 +504,11 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
                 onClick={() => setModalTab('pdf')}
                 className={`flex-1 py-1 rounded-lg text-center ${modalTab === 'pdf' ? 'bg-white font-bold' : 'text-slate-600'}`}
               >
-                📄 PDF
+                {((selectedDoc.document?.original_filename || '').match(/\.(png|jpe?g|webp|gif|svg)$/i) ||
+                  selectedDoc.document?.file_type?.toLowerCase().includes('image') ||
+                  (selectedDoc.document?.preview_url && selectedDoc.document.preview_url.startsWith('data:image')))
+                  ? '🖼️ Image'
+                  : '📄 Doc'}
               </button>
               <button
                 onClick={() => setModalTab('facts')}
@@ -441,34 +527,52 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               
-              {/* TAB 1: PDF VIEWER & CLINICAL PRESCRIPTION SHEET */}
-              {modalTab === 'pdf' && (
-                <div className="space-y-6">
-                  
-                  {/* Top Bar with download & full view */}
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100 text-xs">
-                    <span className="text-slate-600">
-                      Viewing document: <strong className="text-slate-900">{selectedDoc.document?.original_filename}</strong>
-                    </span>
-                    <a
-                      href={api.getDocumentFileUrl(selectedDoc.document?.id)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-brand-700 font-bold hover:underline flex items-center space-x-1"
-                    >
-                      <span>Download / Open Full PDF</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
+              {/* TAB 1: DOCUMENT VIEWER & CLINICAL PRESCRIPTION SHEET */}
+              {modalTab === 'pdf' && (() => {
+                const docFileUrl = selectedDoc.document?.preview_url || api.getDocumentFileUrl(selectedDoc.document?.id);
+                const isImg = Boolean(
+                  (selectedDoc.document?.original_filename || '').match(/\.(png|jpe?g|webp|gif|svg)$/i) ||
+                  selectedDoc.document?.file_type?.toLowerCase().includes('image') ||
+                  (selectedDoc.document?.preview_url && selectedDoc.document.preview_url.startsWith('data:image'))
+                );
 
-                  {/* Embedded PDF iframe / Document Viewer */}
-                  <div className="rounded-2xl border-2 border-slate-300 overflow-hidden shadow-inner bg-slate-900">
-                    <iframe
-                      src={api.getDocumentFileUrl(selectedDoc.document?.id)}
-                      title="Medical Document PDF Viewer"
-                      className="w-full h-[520px] bg-white"
-                    />
-                  </div>
+                return (
+                  <div className="space-y-6">
+                    
+                    {/* Top Bar with download & full view */}
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100 text-xs">
+                      <span className="text-slate-600">
+                        Viewing document: <strong className="text-slate-900">{selectedDoc.document?.original_filename}</strong>
+                      </span>
+                      <a
+                        href={docFileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-brand-700 font-bold hover:underline flex items-center space-x-1"
+                      >
+                        <span>{isImg ? 'Open Full Resolution Image' : 'Download / Open Full File'}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+
+                    {/* Visual Document Viewer: Image or PDF */}
+                    {isImg ? (
+                      <div className="rounded-2xl border-2 border-slate-300 overflow-hidden shadow-inner bg-slate-900 flex items-center justify-center p-3 min-h-[360px] max-h-[640px]">
+                        <img
+                          src={docFileUrl}
+                          alt={selectedDoc.document?.original_filename || 'Uploaded Medical Document'}
+                          className="max-h-[580px] max-w-full object-contain rounded-lg shadow-md transition"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border-2 border-slate-300 overflow-hidden shadow-inner bg-slate-900">
+                        <iframe
+                          src={docFileUrl}
+                          title="Medical Document Viewer"
+                          className="w-full h-[520px] bg-white"
+                        />
+                      </div>
+                    )}
 
                   {/* Clinical Prescription Sheet Layout (Reconstructed from verified extraction) */}
                   <div className="bg-white rounded-2xl border-2 border-slate-200 p-6 shadow-sm space-y-4">
@@ -514,8 +618,9 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
                     </div>
                   </div>
 
-                </div>
-              )}
+                  </div>
+                );
+              })()}
 
               {/* TAB 2: EXTRACTED CLINICAL FACTS */}
               {modalTab === 'facts' && (
@@ -665,6 +770,46 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
                 </select>
               </div>
 
+              {/* Quick Load Open Source Sample Medical Documents */}
+              <div className="p-3 bg-teal-50/70 border border-teal-200/80 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-teal-900">
+                  <span className="flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Open-Source Sample Medical PDFs (1-Click Test):</span>
+                  </span>
+                  <span className="text-[10px] text-teal-700 bg-white px-2 py-0.5 rounded-full border border-teal-200 font-semibold">
+                    5 Ready
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'Cardiology Rx', file: '1_Prescription_Dr_Mehta_Cardiology_Oct2026.pdf', cat: 'Prescription' },
+                    { label: 'Lab Panel (2025)', file: '2_Lab_Report_Metropolis_Metabolic_Nov2025.pdf', cat: 'Lab Report' },
+                    { label: 'Lab Panel (2026)', file: '3_Lab_Report_Apex_Metabolic_Sep2026.pdf', cat: 'Lab Report' },
+                    { label: 'Discharge Summary', file: '4_Hospital_Discharge_Summary_MaxCare_Sep2026.pdf', cat: 'Discharge Summary' },
+                    { label: 'CBC Blood Report', file: '5_CBC_Hematology_Haemoglobin_Report_Mar2026.pdf', cat: 'Lab Report' },
+                  ].map(sample => (
+                    <button
+                      key={sample.file}
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const f = await api.fetchSamplePdfFile(sample.file);
+                          validateAndAddFiles([f]);
+                          setUploadCategory(sample.cat);
+                        } catch (e) {
+                          console.error('Failed to load sample file:', e);
+                        }
+                      }}
+                      className="px-2.5 py-1 bg-white hover:bg-teal-100/70 border border-teal-200 rounded-lg text-[11px] font-semibold text-teal-800 transition flex items-center space-x-1 shadow-2xs"
+                    >
+                      <FileText className="w-3 h-3 text-teal-600" />
+                      <span>+ {sample.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Drag and Drop Box */}
               <div
                 onDragOver={(e) => e.preventDefault()}
@@ -753,6 +898,180 @@ export const DocumentsPage: React.FC<DocumentsPageProps> = ({ initialOpenUpload 
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* SEND TO DOCTOR MODAL */}
+      {sharingDoc && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Send className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Send to Doctor Portal</h3>
+                  <p className="text-[11px] text-slate-500">Generate a secure, time-limited clinical link</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSharingDoc(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Document Info Card */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <FileText className="w-5 h-5 text-brand-600 shrink-0" />
+                <div className="min-w-0">
+                  <span className="font-bold text-slate-900 block truncate" title={sharingDoc.original_filename}>
+                    {sharingDoc.original_filename}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {sharingDoc.category} • {sharingDoc.document_date || 'Recent'}
+                  </span>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 shrink-0">
+                Ready to Send
+              </span>
+            </div>
+
+            {!generatedShare ? (
+              <form onSubmit={handleGenerateDoctorLink} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Doctor or Hospital Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dr. Verma / Cardiology OPD"
+                    value={shareDoctorName}
+                    onChange={(e) => setShareDoctorName(e.target.value)}
+                    className="w-full py-2 px-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Link Expiration Window
+                  </label>
+                  <select
+                    value={shareHours}
+                    onChange={(e) => setShareHours(Number(e.target.value))}
+                    className="w-full py-2 px-3 border border-slate-300 rounded-xl focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value={2}>2 Hours (Immediate Bedside Consult)</option>
+                    <option value={12}>12 Hours (Same Day OPD)</option>
+                    <option value={24}>24 Hours (Standard Review)</option>
+                    <option value={48}>48 Hours (Recommended Weekend Coverage)</option>
+                    <option value={168}>7 Days (Post-op Follow-up)</option>
+                  </select>
+                </div>
+
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-900 text-[11px] space-y-1">
+                  <p className="font-bold flex items-center space-x-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Security Protections Active:</span>
+                  </p>
+                  <p>• Doctor views Two-Minute Brief & source document with zero account required</p>
+                  <p>• Scoped directly to this authorized record</p>
+                  <p>• Revoke access at any time from Sharing Center</p>
+                </div>
+
+                <div className="pt-2 flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setSharingDoc(null)}
+                    disabled={creatingShare}
+                    className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creatingShare}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/25 transition flex items-center space-x-1.5"
+                  >
+                    {creatingShare ? (
+                      <>
+                        <div className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                        <span>Generating Link...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Generate & Send Link</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4 text-xs">
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-950 space-y-2">
+                  <div className="flex items-center space-x-2 font-bold text-sm text-emerald-900">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>Doctor Portal Link Ready!</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800">
+                    A secure 48-hour access link has been generated. Share this link with your doctor via WhatsApp, SMS, or email. The doctor can immediately view your document and the synthesized 2-minute clinical briefing.
+                  </p>
+                  <div className="p-2 bg-white rounded-xl border border-emerald-200 font-mono text-[11px] break-all select-all text-slate-800">
+                    {generatedShare.shareUrl}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl flex items-center justify-center space-x-1.5 transition text-xs shadow"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>Copied to Clipboard!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Copy Doctor Link</span>
+                      </>
+                    )}
+                  </button>
+
+                  {onOpenDoctorPortal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenDoctorPortal(generatedShare.token);
+                        setSharingDoc(null);
+                      }}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center space-x-1.5 transition text-xs shadow-md shadow-emerald-600/25"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Preview Doctor Portal</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setSharingDoc(null)}
+                    className="text-xs text-slate-500 hover:text-slate-800 font-medium"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

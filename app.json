@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "454c2c8e-4176-41dd-a148-4428ff8b18ca"
+      }
+    },
+    "android": {
+      "package": "com.yashbansal05.sehatsathi"
+    }
+  }
+}

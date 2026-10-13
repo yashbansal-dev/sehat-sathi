@@ -1,23 +1,23 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import Optional, List, Any, Dict
 from datetime import datetime
 
 # --- Auth Schemas ---
 class UserRegister(BaseModel):
-    email: EmailStr
+    email: str
     password: str
     full_name: str
     role: Optional[str] = "patient"
     firebase_token: Optional[str] = None
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: Optional[str] = None
     firebase_token: Optional[str] = None
 
 class FirebaseLoginRequest(BaseModel):
     firebase_uid: str
-    email: EmailStr
+    email: str
     full_name: Optional[str] = None
     role: Optional[str] = "patient"
 
@@ -256,7 +256,7 @@ class VerificationActionRequest(BaseModel):
 
 # --- Sharing Schemas ---
 class CreateShareTokenRequest(BaseModel):
-    title: str
+    title: Optional[str] = "Doctor Consultation"
     doctor_name_or_purpose: Optional[str] = None
     duration_hours: int = 24  # default 24h
     allowed_document_ids: Optional[List[str]] = None

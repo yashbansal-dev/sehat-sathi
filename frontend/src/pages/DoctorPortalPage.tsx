@@ -280,6 +280,53 @@ export const DoctorPortalPage: React.FC<DoctorPortalPageProps> = ({ token, onExi
               </div>
             </div>
 
+            {/* Shared Medical Documents Vault */}
+            {data.documents && data.documents.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center space-x-1.5">
+                  <FileText className="w-4 h-4 text-brand-600" />
+                  <span>Shared Medical Documents & Prescriptions ({data.documents.length})</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {data.documents.map((doc: any) => (
+                    <div
+                      key={doc.id}
+                      className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-brand-300 transition shadow-xs flex items-center justify-between space-x-3 text-xs"
+                    >
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5 text-teal-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 truncate" title={doc.original_filename}>
+                            {doc.original_filename || doc.filename}
+                          </h4>
+                          <div className="flex items-center space-x-2 text-[11px] text-slate-500 mt-0.5">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 font-semibold text-slate-700">
+                              {doc.category}
+                            </span>
+                            {doc.document_date && <span>• {doc.document_date}</span>}
+                            {doc.doctor_name && <span>• Dr: {doc.doctor_name}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveEvidence({
+                          title: doc.original_filename || 'Medical Document',
+                          docId: doc.id,
+                          docName: doc.original_filename
+                        })}
+                        className="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold rounded-lg transition inline-flex items-center space-x-1 shrink-0 text-xs"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View PDF</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Questions for Clinician */}
             <div className="p-4 rounded-xl border border-amber-300 bg-amber-50/40 text-xs text-amber-950 space-y-1.5">
               <span className="font-bold block text-amber-900">Recommended Clinician Verification Items:</span>
@@ -325,11 +372,24 @@ export const DoctorPortalPage: React.FC<DoctorPortalPageProps> = ({ token, onExi
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 </div>
-                <iframe
-                  src={api.getDoctorFileUrl(token, activeEvidence.docId)}
-                  title="Doctor PDF Viewer"
-                  className="w-full h-[450px] bg-white"
-                />
+                {activeEvidence.docName?.toLowerCase().endsWith('.png') ||
+                activeEvidence.docName?.toLowerCase().endsWith('.jpg') ||
+                activeEvidence.docName?.toLowerCase().endsWith('.jpeg') ||
+                activeEvidence.docName?.toLowerCase().endsWith('.webp') ? (
+                  <div className="p-4 flex items-center justify-center bg-slate-950 min-h-[450px]">
+                    <img
+                      src={api.getDoctorFileUrl(token, activeEvidence.docId)}
+                      alt="Source Medical Document"
+                      className="max-h-[520px] w-auto max-w-full object-contain rounded shadow-lg"
+                    />
+                  </div>
+                ) : (
+                  <iframe
+                    src={api.getDoctorFileUrl(token, activeEvidence.docId)}
+                    title="Doctor Document Viewer"
+                    className="w-full h-[520px] bg-white"
+                  />
+                )}
               </div>
             </div>
 

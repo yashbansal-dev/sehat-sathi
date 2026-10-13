@@ -27,6 +27,7 @@ export interface MedicalDocument {
   status: 'uploaded' | 'processing' | 'completed' | 'failed';
   ocr_confidence?: number;
   ocr_text?: string;
+  preview_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -176,4 +177,40 @@ export interface DashboardStats {
   abnormal_lab_results: number;
   recent_uploads: MedicalDocument[];
   recent_events: TimelineEvent[];
+}
+
+export interface PrescriptionInput {
+  medicine_name: string;
+  dosage: string;
+  frequency: string;
+  timing?: string;
+  duration?: string;
+  indication?: string;
+  instructions?: string;
+}
+
+export interface CheckedInPatient {
+  id: string;
+  name: string;
+  token_number: string;
+  checkin_time: string;
+  gender: string;
+  age: number;
+  blood_group: string;
+  phone: string;
+  chief_complaint: string;
+  vitals: {
+    bp: string;
+    pulse: string;
+    blood_sugar?: string;
+    temp?: string;
+    spo2?: string;
+  };
+  status: 'waiting' | 'in_consultation' | 'completed';
+  alerts: string[];
+  active_medications_count: number;
+  allergies: string[];
+  doctor_notes?: string;
+  briefing: DoctorBriefing;
+  documents?: MedicalDocument[];
 }

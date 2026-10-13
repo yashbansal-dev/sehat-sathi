@@ -61,6 +61,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('sehat_user', JSON.stringify(data.user));
       setUser(data.user);
     } catch (firebaseErr: any) {
+      // Resilient fallback to local backend auth if Firebase is unreachable or user registered on local DB
+      try {
+        const localData = await api.login(email, password);
+        localStorage.setItem('sehat_token', localData.access_token);
+        localStorage.setItem('sehat_user', JSON.stringify(localData.user));
+        setUser(localData.user);
+        return;
+      } catch {
+        // Continue to format friendly error message
+      }
+
       // Format friendly error messages
       let msg = firebaseErr.message || 'Authentication failed.';
       if (firebaseErr.code === 'auth/invalid-credential' || firebaseErr.code === 'auth/wrong-password') {
@@ -107,6 +118,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('sehat_user', JSON.stringify(data.user));
       setUser(data.user);
     } catch (firebaseErr: any) {
+      // Resilient fallback to local backend register if Firebase rejects/offline
+      try {
+        const localData = await api.register(email, password, fullName, role);
+        localStorage.setItem('sehat_token', localData.access_token);
+        localStorage.setItem('sehat_user', JSON.stringify(localData.user));
+        setUser(localData.user);
+        return;
+      } catch {
+        // Continue to friendly message
+      }
+
       let msg = firebaseErr.message || 'Registration failed.';
       if (firebaseErr.code === 'auth/email-already-in-use') {
         msg = 'An account with this email already exists. Please sign in instead.';

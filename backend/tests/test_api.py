@@ -16,7 +16,6 @@ def test_demo_login():
     assert "access_token" in data
     assert data["user"]["full_name"] == "Rajesh Sharma"
     assert data["user"]["email"] == "patient.demo@sehatsathi.ai"
-    return data["access_token"]
 
 def test_timeline_and_stats():
     # Login as demo user

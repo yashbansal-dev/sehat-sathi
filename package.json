@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd frontend && npm install && npm run build"
+    "build": "cd frontend && npm install && npm run build",
+    "web": "npm run dev --prefix frontend",
+    "mobile": "npm run start --prefix mobile",
+    "mobile:web": "npm run web --prefix mobile",
+    "backend": "cd backend && .\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --port 8000 --reload",
+    "test:backend": "cd backend && .\\.venv\\Scripts\\python.exe -m pytest tests/test_flow.py -v",
+    "test:demo": "cd backend && .\\.venv\\Scripts\\python.exe test_14_step_demo.py"
   }
 }
