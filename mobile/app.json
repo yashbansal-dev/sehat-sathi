@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Sehat Sathi",
+    "slug": "sehat-sathi-patient",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sehatsathi.patient"
+    },
+    "scheme": "sehatsathi",
+    "android": {
+      "package": "com.sehatsathi.patient",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#0D9488",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c8ee3450-db34-4bdf-84b6-d857a8847505"
+      }
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-notifications"
+    ]
+  }
+}
